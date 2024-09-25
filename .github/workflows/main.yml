@@ -24,8 +24,7 @@ jobs:
     - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
     - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
     - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Asd@123456" -Force)
-    - name: Create Tunnel
-      run: start .\ngrok\ngrok.exe tcp 3389
+
     - run: net config server /srvcomment:"Windows Server " > errormsg.txt 2>&1 
     - run: REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /V EnableAutoTray /T REG_DWORD /D 0 /F > errormsg.txt 2>&1
     - run: net user UserX Asd@123456 /add >nul
@@ -38,4 +37,6 @@ jobs:
     - run: tasklist | find /i "ngrok.exe" >Nul && curl -s localhost:4040/api/tunnels | jq -r .tunnels[0].public_url || echo "Failed to retreive NGROK authtoken - check again your authtoken"
     - run: echo Username UserX / runneradmin
     - run: echo Password Asd@123456
-    - run: echo You can login now!
+    - name: Create Tunnel
+      run: .\ngrok\ngrok.exe tcp 3389
+
