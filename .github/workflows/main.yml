@@ -13,7 +13,6 @@ jobs:
     - run: choco install googledrive -y
     - run: choco install qdir -y
     - run: choco install winrar -y
-    - run: choco install jdownloader -y
     - name: Extract
       run: Expand-Archive ngrok.zip
     - name: Auth
@@ -26,7 +25,7 @@ jobs:
     - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
     - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Asd@123456" -Force)
     - name: Create Tunnel
-      run: start powershell -NoExit -Command "ngrok tcp 3389 --region in"
+      run: start .\ngrok\ngrok.exe tcp 3389
     - run: net config server /srvcomment:"Windows Server " > errormsg.txt 2>&1 
     - run: REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /V EnableAutoTray /T REG_DWORD /D 0 /F > errormsg.txt 2>&1
     - run: net user UserX Asd@123456 /add >nul
