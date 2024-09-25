@@ -34,7 +34,6 @@ jobs:
     - run: ICACLS C:\Windows\installer /grant UserX:F >nul
     - run: diskperf -Y >nul
     - run: echo IP
-    - run: tasklist | find /i "ngrok.exe" >Nul && curl -s localhost:4040/api/tunnels | jq -r .tunnels[0].public_url || echo "Failed to retreive NGROK authtoken - check again your authtoken"
     - run: echo Username UserX / runneradmin
     - run: echo Password Asd@123456
     - name: Create Tunnel
