@@ -8,27 +8,35 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Downloading Essentials
-      run: | 
-          invoke-WebRequest https://raw.githubusercontent.com/STharanga/FVPS_Files/main/Downloads.bat -OutFile Downloads.bat
-          cmd /c Downloads.bat
     - name: Download
       run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+    - run: choco install googledrive -y
+    - run: choco install qdir -y
     - run: choco install winrar -y
+    - run: choco install jdownloader -y
     - name: Extract
       run: Expand-Archive ngrok.zip
     - name: Auth
       run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-    - name: Enabling RDP Access
-      run: cmd /c Acess.bat
-
-    - name: Upload Softwares 
-      run: cmd /c Uploads.bat        
-
-    - name: Log In To Remote Desktop Protocol
-      run: cmd /c start.bat
-
-    - name: Time Count
-      run: cmd /c loop.bat
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Asd@123456" -Force)
+    - name: Create Tunnel
+      run: start powershell -NoExit -Command "ngrok tcp 3389 --region in"
+    - run: net config server /srvcomment:"Windows Server " > errormsg.txt 2>&1 
+    - run: REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /V EnableAutoTray /T REG_DWORD /D 0 /F > errormsg.txt 2>&1
+    - run: net user UserX Asd@123456 /add >nul
+    - run: net localgroup administrators UserX /add >nul
+    - run: net user installer /delete
+    - run: ICACLS C:\Windows\Temp /grant UserX:F >nul
+    - run: ICACLS C:\Windows\installer /grant UserX:F >nul
+    - run: diskperf -Y >nul
+    - run: echo IP
+    - run: tasklist | find /i "ngrok.exe" >Nul && curl -s localhost:4040/api/tunnels | jq -r .tunnels[0].public_url || echo "Failed to retreive NGROK authtoken - check again your authtoken"
+    - run: echo Username UserX / runneradmin
+    - run: echo Password Asd@123456
+    - run: echo You can login now!
