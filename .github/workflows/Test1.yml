@@ -1,0 +1,34 @@
+name: Test1
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - name: Download
+      run: choco install ngrok
+    - run: choco install qdir -y
+    - run: choco install winrar -y
+    - name: Extract
+      run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Asd@123456" -Force)
+    - run: net config server /srvcomment:"Windows Server " > errormsg.txt 2>&1 
+    - run: REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /V EnableAutoTray /T REG_DWORD /D 0 /F > errormsg.txt 2>&1
+    - run: net user UserX Asd@123456 /add >nul
+    - run: net localgroup administrators UserX /add >nul
+    - run: net user installer /delete
+    - run: ICACLS C:\Windows\Temp /grant UserX:F >nul
+    - run: ICACLS C:\Windows\installer /grant UserX:F >nul
+    - run: diskperf -Y >nul
+    - run: echo IP
+    - run: echo Username UserX / runneradmin
+    - run: echo Password Asd@123456
+    - name: Create Tunnel
+      run: ngrok http --url=eager-rattler-currently.ngrok-free.app 80
