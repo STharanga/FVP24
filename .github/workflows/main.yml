@@ -8,34 +8,33 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Download
-      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-    - run: choco install googledrive -y
-    - run: choco install qdir -y
-    - run: choco install winrar -y
-    - name: Extract
-      run: Expand-Archive ngrok.zip
+    - name: Download/Install
+      run: |
+          choco install ngrok -y --limit-output --no-progress
+          choco install qdir -y --limit-output --no-progress
+          choco install winrar -y --limit-output --no-progress
     - name: Auth
-      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      run: ngrok authtoken $Env:NGROK_AUTH_TOKEN
       env:
         NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
     - name: Enable TS
-      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
-    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Asd@123456" -Force)
-
-    - run: net config server /srvcomment:"Windows Server " > errormsg.txt 2>&1 
-    - run: REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /V EnableAutoTray /T REG_DWORD /D 0 /F > errormsg.txt 2>&1
-    - run: net user UserX Asd@123456 /add >nul
-    - run: net localgroup administrators UserX /add >nul
-    - run: net user installer /delete
-    - run: ICACLS C:\Windows\Temp /grant UserX:F >nul
-    - run: ICACLS C:\Windows\installer /grant UserX:F >nul
-    - run: diskperf -Y >nul
-    - run: echo IP
-    - run: echo Username UserX / runneradmin
-    - run: echo Password Asd@123456
+      run: | 
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "Asd@123456" -Force)
+    - name: Create Account
+      run: | 
+        net config server /srvcomment:"Windows Server " > errormsg.txt 2>&1 
+        REG ADD "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /V EnableAutoTray /T REG_DWORD /D 0 /F > errormsg.txt 2>&1
+        net user UserX Asd@123456 /add >nul
+        net localgroup administrators UserX /add >nul
+        net user installer /delete
+        ICACLS C:\Windows\Temp /grant UserX:F >nul
+        ICACLS C:\Windows\installer /grant UserX:F >nul
+        diskperf -Y >nul
+        echo Username UserX / runneradmin
+        echo Password Asd@123456
     - name: Create Tunnel
-      run: .\ngrok\ngrok.exe tcp 3389
+      run: ngrok tcp 3389
 
