@@ -10,7 +10,7 @@ jobs:
     steps:
     - name: Download/Install
       run: |
-          choco install googledrive -y -r
+          choco install ngrok -y -r
           choco install qdir -y -r
           choco install winrar -y -r
     - name: Auth
