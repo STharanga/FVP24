@@ -13,6 +13,10 @@ jobs:
           choco install ngrok -y --limit-output --no-progress
           choco install qdir -y --limit-output --no-progress
           choco install winrar -y --limit-output --no-progress
+          choco install googledrive -y --limit-output --no-progress
+          choco install pcloud -y --limit-output --no-progress
+          choco install netdrive -y --limit-output --no-progress
+          choco install airexplorer -y --limit-output --no-progress
     - name: Auth
       run: ngrok authtoken $Env:NGROK_AUTH_TOKEN
       env:
