@@ -17,7 +17,7 @@ jobs:
     - name: Install Desktop
       run: |
         export DEBIAN_FRONTEND=noninteractive
-        vsudo apt update
+        sudo apt update
         wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
         sudo dpkg --install chrome-remote-desktop_current_amd64.deb
         sudo apt install --assume-yes --fix-broken
