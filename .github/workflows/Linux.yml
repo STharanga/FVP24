@@ -1,6 +1,6 @@
 name: Linux
 on: 
-  public:
+  workflow_dispatch:
 jobs:
   my_job:
     name: Run Ubuntu-latest
