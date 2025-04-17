@@ -29,7 +29,7 @@ jobs:
             echo -e "#!/bin/bash
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
-            exec startxfce4" > /home/roxx/.vnc/xstartup
+            dbus-launch xfce4-session" > /home/roxx/.vnc/xstartup
             
             chmod +x /home/roxx/.vnc/xstartup
           '
