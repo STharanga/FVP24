@@ -1,55 +1,36 @@
 name: Linux
-on: 
-  workflow_dispatch:
+on: workflow_dispatch
 jobs:
   my_job:
-    name: Run Ubuntu-latest
     runs-on: ubuntu-latest
-
     steps:
-    - name: System Setup
-      run: |
-        sudo useradd -m roxx
-        sudo adduser roxx sudo
-        # No password setup needed for sudo
+      - name: System Setup
+        run: |
+          sudo useradd -m roxx
+          echo "roxx:123456" | sudo chpasswd  # Set password for roxx
+          sudo adduser roxx sudo
 
-    - name: Install Desktop
-      run: |
-        sudo apt install --assume-yes xfce4 desktop-base xfce4-terminal xserver-xorg-video-dummy xbase-clients
+      - name: Install xrdp & XFCE
+        run: |
+          sudo apt update
+          sudo apt install -y xfce4 xrdp xorgxrdp
 
-    - name: Install Google
-      run: |
-        export DEBIAN_FRONTEND=noninteractive
-        wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
-        wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-        sudo dpkg --install chrome-remote-desktop_current_amd64.deb
-        sudo dpkg --install google-chrome-stable_current_amd64.deb
-        sudo apt install --assume-yes --fix-broken
-        sudo groupadd chrome-remote-desktop || true  # Group might already exist
+      - name: Configure XFCE
+        run: |
+          echo "xfce4-session" | sudo tee /home/roxx/.xsession
+          sudo chown roxx:roxx /home/roxx/.xsession
+          sudo systemctl restart xrdp
 
-    - name: Setup Desktop
-      run: |
-        sudo bash -c 'echo "exec /etc/X11/Xsession /usr/bin/xfce4-session" > /etc/chrome-remote-desktop-session'
-        sudo systemctl disable lightdm.service
-        sudo adduser roxx chrome-remote-desktop
-        # Use sudo -u instead of su
-        sudo -u roxx DISPLAY= /opt/google/chrome-remote-desktop/start-host \
-          --code="4/0Ab_5qllrfR_YioOzVVQypBJa0UEjWK15kGPCH4Qht7PGT8ax0aAwc_Kc1v2LrsGL8bCPKQ" \
-          --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
-          --name="$(hostname)" \
-          --pin=123456
+      - name: Install Ngrok
+        run: |
+          curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install -y ngrok
+
+      - name: Auth Ngrok
+        run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
+
+      - name: Start RDP Tunnel
+        run: ngrok tcp 3389
+
     
-    - name: Download/Install
-      run: |
-        curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
-        | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
-        && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
-        | sudo tee /etc/apt/sources.list.d/ngrok.list \
-        && sudo apt update \
-        && sudo apt install ngrok 
-    
-    - name: Auth
-      run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
-    
-    - name: Create Tunnel
-      run: ngrok stcp 3389  # Fix typo (atcp → tcp)
