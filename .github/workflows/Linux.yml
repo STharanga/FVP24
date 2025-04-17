@@ -11,12 +11,7 @@ jobs:
       run: |
         sudo useradd -m roxx
         sudo adduser roxx sudo
-        echo roxx:root >> pass.txt
-        sudo chpasswd < pass.txt
-        sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
-        sudo su
-        sudo -u roxx 'DISPLAY= /opt/google/chrome-remote-desktop/start-host --code="4/0Ab_5qllrfR_YioOzVVQypBJa0UEjWK15kGPCH4Qht7PGT8ax0aAwc_Kc1v2LrsGL8bCPKQ" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$(hostname) --pin=123456'
-        sudo apt-get update 
+        # No password setup needed for sudo
 
     - name: Install Desktop
       run: |
@@ -30,15 +25,20 @@ jobs:
         sudo dpkg --install chrome-remote-desktop_current_amd64.deb
         sudo dpkg --install google-chrome-stable_current_amd64.deb
         sudo apt install --assume-yes --fix-broken
-        sudo groupadd chrome-remote-desktop
-   
+        sudo groupadd chrome-remote-desktop || true  # Group might already exist
+
     - name: Setup Desktop
       run: |
-        sudo bash -c 'echo \"exec /etc/X11/Xsession /usr/bin/xfce4-session\" > /etc/chrome-remote-desktop-session'
+        sudo bash -c 'echo "exec /etc/X11/Xsession /usr/bin/xfce4-session" > /etc/chrome-remote-desktop-session'
         sudo systemctl disable lightdm.service
         sudo adduser roxx chrome-remote-desktop
-        su - roxx -c 'DISPLAY= /opt/google/chrome-remote-desktop/start-host --code="4/0Ab_5qllrfR_YioOzVVQypBJa0UEjWK15kGPCH4Qht7PGT8ax0aAwc_Kc1v2LrsGL8bCPKQ" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$(hostname) --pin=123456'
-        
+        # Use sudo -u instead of su
+        sudo -u roxx DISPLAY= /opt/google/chrome-remote-desktop/start-host \
+          --code="4/0Ab_5qllrfR_YioOzVVQypBJa0UEjWK15kGPCH4Qht7PGT8ax0aAwc_Kc1v2LrsGL8bCPKQ" \
+          --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
+          --name="$(hostname)" \
+          --pin=123456
+    
     - name: Download/Install
       run: |
         curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
@@ -52,4 +52,4 @@ jobs:
       run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
     
     - name: Create Tunnel
-      run: ngrok atcp 3389
+      run: ngrok stcp 3389  # Fix typo (atcp → tcp)
