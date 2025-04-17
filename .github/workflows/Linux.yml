@@ -24,7 +24,7 @@ jobs:
         run: |
           # Create password non-interactively
           sudo -u roxx mkdir -p /home/roxx/.vnc
-          echo "vncpass" | sudo -u roxx vncpasswd -f > /home/roxx/.vnc/passwd
+          echo "xt112233" | sudo -u roxx vncpasswd -f > /home/roxx/.vnc/passwd
           sudo -u roxx chmod 600 /home/roxx/.vnc/passwd
 
           # Create secure xstartup
