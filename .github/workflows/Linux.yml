@@ -14,7 +14,7 @@ jobs:
         echo roxx:root >> pass.txt
         sudo chpasswd < pass.txt
         sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
-        sudo su -
+        sudo su
         sudo -u roxx 'DISPLAY= /opt/google/chrome-remote-desktop/start-host --code="4/0Ab_5qllrfR_YioOzVVQypBJa0UEjWK15kGPCH4Qht7PGT8ax0aAwc_Kc1v2LrsGL8bCPKQ" --redirect-url="https://remotedesktop.google.com/_/oauthredirect" --name=$(hostname) --pin=123456'
         sudo apt-get update 
 
