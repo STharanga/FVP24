@@ -7,18 +7,30 @@ jobs:
       - name: System Setup
         run: |
           sudo useradd -m roxx
-          echo "roxx:123456" | sudo chpasswd  # Set password for roxx
+          echo "roxx:123456" | sudo chpasswd
           sudo adduser roxx sudo
 
-      - name: Install xrdp & XFCE
+      - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y xfce4 xrdp xorgxrdp
+          sudo apt install -y dbus-x11 xfce4 xfce4-goodies xorg xserver-xorg-core
+          sudo service dbus start
 
       - name: Configure XFCE
         run: |
-          echo "xfce4-session" | sudo tee /home/roxx/.xsession
+          echo "export XDG_CONFIG_DIRS=/etc/xdg" | sudo tee -a /etc/environment
+          sudo -u roxx bash -c 'echo "exec /usr/bin/xfce4-session" > ~/.xsession'
           sudo chown roxx:roxx /home/roxx/.xsession
+          sudo chmod +x /home/roxx/.xsession
+
+      - name: Start Xvfb
+        run: |
+          sudo Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+
+      - name: Install xrdp (Optional for RDP)
+        run: |
+          sudo apt install -y xrdp xorgxrdp
           sudo systemctl restart xrdp
 
       - name: Install Ngrok
@@ -30,7 +42,8 @@ jobs:
       - name: Auth Ngrok
         run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
 
-      - name: Start RDP Tunnel
-        run: ngrok tcp 3389
+      - name: Start Ngrok Tunnel
+        run: ngrok tcp 3389  # For xrdp
+
 
     
