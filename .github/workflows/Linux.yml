@@ -15,9 +15,10 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y \
-            xfce4 xfce4-goodies \
+            xfce4 xfce4-session xfce4-goodies \
             tigervnc-standalone-server \
-            dbus-x11 xserver-xorg-legacy
+            dbus-x11 x11-utils \
+            xserver-xorg-legacy xfconf
 
       - name: Configure VNC
         run: |
@@ -25,19 +26,29 @@ jobs:
             mkdir -p /home/roxx/.vnc
             echo "vncpass" | vncpasswd -f > /home/roxx/.vnc/passwd
             chmod 600 /home/roxx/.vnc/passwd
-            
-            echo -e "#!/bin/bash
+
+            echo -e "#!/bin/sh
             unset SESSION_MANAGER
             unset DBUS_SESSION_BUS_ADDRESS
-            dbus-launch xfce4-session" > /home/roxx/.vnc/xstartup
-            
+            export XDG_CONFIG_DIRS=/etc/xdg
+            export XDG_RUNTIME_DIR=/tmp/xdg-runtime-\$(id -u)
+            mkdir -p \$XDG_RUNTIME_DIR
+            chmod 0700 \$XDG_RUNTIME_DIR
+
+            # Start critical DBus services
+            eval \$(dbus-launch --sh-syntax --exit-with-session)
+            /usr/libexec/xfce-polkit &
+            /usr/libexec/at-spi-bus-launcher --launch-immediately &
+
+            exec startxfce4" > /home/roxx/.vnc/xstartup
+
             chmod +x /home/roxx/.vnc/xstartup
           '
 
-      - name: Cleanup Existing X Servers
+      - name: Cleanup Existing Servers
         run: |
-          sudo pkill Xvfb || true  # Kill virtual display if running
-          sudo -u roxx vncserver -kill :1 >/dev/null 2>&1 || true  # Kill previous VNC
+          sudo pkill Xvfb || true
+          sudo -u roxx vncserver -kill :1 >/dev/null 2>&1 || true
 
       - name: Start VNC Server
         run: |
