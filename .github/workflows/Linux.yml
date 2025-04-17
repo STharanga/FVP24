@@ -7,6 +7,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: System Setup
+      run: |
+        useradd -m roxx
+        adduser roxx sudo
+        echo roxx:root | chpasswd
+        sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
+    - name: Install Desktop
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+        dpkg --install chrome-remote-desktop_current_amd64.deb
+        apt install --assume-yes --fix-broken
+        apt install --assume-yes xfce4 desktop-base xfce4-terminal
     - name: Download/Install
       run: |
         curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
@@ -14,8 +27,8 @@ jobs:
         && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
         | sudo tee /etc/apt/sources.list.d/ngrok.list \
         && sudo apt update \
-        && sudo apt install ngrok ubuntu-desktop
+        && sudo apt install ngrok 
     - name: Auth
       run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
     - name: Create Tunnel
-      run: ngrok tcp 3389
+      run: ngrok atcp 3389
