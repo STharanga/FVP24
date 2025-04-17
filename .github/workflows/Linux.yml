@@ -9,8 +9,8 @@ jobs:
     steps:
     - name: System Setup
       run: |
-        useradd -m roxx
-        adduser roxx sudo
+        sudo useradd -m roxx
+        sudo adduser roxx sudo
         echo roxx:root | chpasswd
         sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
     - name: Install Desktop
