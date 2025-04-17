@@ -8,58 +8,82 @@ jobs:
         run: |
           sudo useradd -m roxx
           echo "roxx:123456" | sudo chpasswd
-          sudo adduser roxx sudo
+          sudo usermod -aG sudo roxx
           sudo chown -R roxx:roxx /home/roxx
 
-      - name: Install Dependencies
+      - name: Install Core Packages
         run: |
           sudo apt update
           sudo apt install -y \
-            xfce4 xfce4-session xfce4-goodies \
-            tigervnc-standalone-server \
-            dbus-x11 x11-utils \
-            xserver-xorg-legacy xfconf
+            xfce4 xfce4-terminal xfce4-goodies \
+            tigervnc-standalone-server dbus-x11 \
+            x11-utils xserver-xorg-legacy xfconf \
+            xfce4-session xfce4-panel
 
-      - name: Configure VNC
+      - name: Configure VNC Environment
         run: |
           sudo -u roxx bash -c '
             mkdir -p /home/roxx/.vnc
             echo "vncpass" | vncpasswd -f > /home/roxx/.vnc/passwd
             chmod 600 /home/roxx/.vnc/passwd
 
-            echo -e "#!/bin/sh
-            unset SESSION_MANAGER
-            unset DBUS_SESSION_BUS_ADDRESS
-            export XDG_CONFIG_DIRS=/etc/xdg
-            export XDG_RUNTIME_DIR=/tmp/xdg-runtime-\$(id -u)
-            mkdir -p \$XDG_RUNTIME_DIR
-            chmod 0700 \$XDG_RUNTIME_DIR
-
-            # Start critical DBus services
-            eval \$(dbus-launch --sh-syntax --exit-with-session)
-            /usr/libexec/xfce-polkit &
-            /usr/libexec/at-spi-bus-launcher --launch-immediately &
-
-            exec startxfce4" > /home/roxx/.vnc/xstartup
+            cat > /home/roxx/.vnc/xstartup << "EOF"
+              #!/bin/bash
+              unset SESSION_MANAGER
+              unset DBUS_SESSION_BUS_ADDRESS
+              
+              export XDG_DATA_DIRS=/usr/share/ubuntu:/usr/local/share/:/usr/share/
+              export XDG_CONFIG_DIRS=/etc/xdg/xdg-ubuntu:/etc/xdg
+              export XDG_RUNTIME_DIR=/run/user/$(id -u)
+              mkdir -p $XDG_RUNTIME_DIR && chmod 700 $XDG_RUNTIME_DIR
+              
+              # Initialize D-Bus with systemd-like environment
+              eval $(dbus-launch --sh-syntax --exit-with-session)
+              export $(dbus-launch)
+              
+              # Required for Xfce4 session
+              sudo mkdir -p /var/lib/dbus
+              sudo ln -sf /run/machine-id /var/lib/dbus/machine-id
+              
+              # Start essential services
+              /usr/libexec/xfce-polkit &
+              /usr/libexec/at-spi-bus-launcher --launch-immediately &
+              /usr/libexec/dconf-service &
+              
+              # Xfce4 Session with explicit DBUS activation
+              exec startxfce4 --with-ck-launch
+              EOF
 
             chmod +x /home/roxx/.vnc/xstartup
           '
 
-      - name: Cleanup Existing Servers
+      - name: Cleanup Previous Sessions
         run: |
-          sudo pkill Xvfb || true
+          sudo pkill -9 Xvfb || true
           sudo -u roxx vncserver -kill :1 >/dev/null 2>&1 || true
 
+      - name: Debug Environment
+        run: |
+          sudo -u roxx bash -c '
+            echo "=== Environment ==="
+            env
+            echo "=== XDG Runtime ==="
+            ls -l /run/user/$(id -u)
+            echo "=== D-Bus Info ==="
+            dbus-launch --version
+          '
+          
       - name: Start VNC Server
         run: |
           sudo -u roxx vncserver :1 -geometry 1280x720 -depth 24 \
+            -localhost no \
             -SecurityTypes VncAuth -PasswordFile /home/roxx/.vnc/passwd
 
       - name: Install Ngrok
         run: |
-          curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-          sudo apt update && sudo apt install -y ngrok
+          curl -sSL https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -o ngrok.zip
+          unzip ngrok.zip
+          sudo chmod +x ngrok
 
       - name: Auth Ngrok
         run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
