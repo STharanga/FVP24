@@ -20,26 +20,28 @@ jobs:
             dbus-x11 xserver-xorg-legacy \
             xvfb
 
-      - name: Configure VNC Securely
+      - name: Configure VNC
         run: |
-          # Create password non-interactively
-          sudo -u roxx mkdir -p /home/roxx/.vnc
-          echo "xt112233" | sudo -u roxx vncpasswd -f > /home/roxx/.vnc/passwd
-          sudo -u roxx chmod 600 /home/roxx/.vnc/passwd
-
-          # Create secure xstartup
-          echo '#!/bin/bash
-          unset SESSION_MANAGER
-          unset DBUS_SESSION_BUS_ADDRESS
-          exec startxfce4' | sudo -u roxx tee /home/roxx/.vnc/xstartup >/dev/null
-          sudo -u roxx chmod +x /home/roxx/.vnc/xstartup
+          # Run ALL commands as 'roxx'
+          sudo -u roxx bash -c '
+            mkdir -p /home/roxx/.vnc
+            echo "vncpass" | vncpasswd -f > /home/roxx/.vnc/passwd
+            chmod 600 /home/roxx/.vnc/passwd
+            
+            echo -e "#!/bin/bash
+            unset SESSION_MANAGER
+            unset DBUS_SESSION_BUS_ADDRESS
+            exec startxfce4" > /home/roxx/.vnc/xstartup
+            
+            chmod +x /home/roxx/.vnc/xstartup
+          '
 
       - name: Start Virtual Display
         run: |
           sudo Xvfb :1 -screen 0 1280x720x24 &
           export DISPLAY=:1
 
-      - name: Start Secure VNC Server
+      - name: Start VNC Server
         run: |
           sudo -u roxx vncserver :1 -geometry 1280x720 -depth 24 \
             -SecurityTypes VncAuth -PasswordFile /home/roxx/.vnc/passwd
