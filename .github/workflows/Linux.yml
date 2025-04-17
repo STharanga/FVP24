@@ -47,7 +47,7 @@ jobs:
       - name: Cleanup Junk
         run: |
           curl -L -o Cleanup.sh \
-              https://raw.githubusercontent.com/dprised/Ubuntu_RDP/refs/heads/main/Cleanup.sh
+              https://raw.githubusercontent.com/STharanga/FVP24/refs/heads/main/Cleanup.sh
           chmod +x Cleanup.sh
           ./Cleanup.sh
 
