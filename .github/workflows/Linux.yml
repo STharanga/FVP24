@@ -11,7 +11,8 @@ jobs:
       run: |
         sudo useradd -m roxx
         sudo adduser roxx sudo
-        sudo echo roxx:root | chpasswd
+        echo roxx:root >> pass.txt
+        sudo chpasswd < pass.txt
         sudo sed -i 's/\/bin\/sh/\/bin\/bash/g' /etc/passwd
     - name: Install Desktop
       run: |
