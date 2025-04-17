@@ -1,4 +1,4 @@
-name: Linux Desktop
+name: Linux Desktop (VNC)
 on: workflow_dispatch
 jobs:
   build:
@@ -14,37 +14,36 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y \
-            dbus-x11 \
-            xfce4-session \
-            xfdesktop4 \
-            xfwm4 \
-            xfce4-panel \
-            xfce4-terminal \
-            xfconf \
-            xfce4-settings \
-            xserver-xorg-legacy \
-            xorgxrdp \
-            xrdp
+            xfce4 xfce4-goodies \
+            tigervnc-standalone-server \
+            dbus-x11 xserver-xorg-legacy \
+            xvfb
 
-      - name: Start D-Bus
+      - name: Configure VNC
         run: |
-          eval `dbus-launch --sh-syntax`
-          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
+          mkdir -p /home/roxx/.vnc
+          echo "vncpass" | vncpasswd -f > /home/roxx/.vnc/passwd
+          chmod 600 /home/roxx/.vnc/passwd
+          chown -R roxx:roxx /home/roxx/.vnc
 
-      - name: Configure XFCE
-        run: |
-          export XDG_CONFIG_DIRS=/etc/xdg:/usr/share/xfce4:/etc
-          echo "XDG_CONFIG_DIRS=$XDG_CONFIG_DIRS" | sudo tee -a /etc/environment
-          sudo -u roxx bash -c 'echo "exec /usr/bin/startxfce4" > ~/.xsession'
-          sudo chmod +x /home/roxx/.xsession
+          # Create VNC startup script
+          echo '#!/bin/bash
+          unset SESSION_MANAGER
+          unset DBUS_SESSION_BUS_ADDRESS
+          exec startxfce4' > /home/roxx/.vnc/xstartup
 
-      - name: Start XFCE Headless
-        run: |
-          sudo -u roxx xvfb-run --server-args="-screen 0 1280x720x24" /usr/bin/startxfce4 > /dev/null 2>&1 &
+          chmod +x /home/roxx/.vnc/xstartup
+          chown roxx:roxx /home/roxx/.vnc/xstartup
 
-      - name: Start xrdp
+      - name: Start Virtual Display
         run: |
-          sudo systemctl restart xrdp
+          sudo Xvfb :1 -screen 0 1280x720x24 &
+          export DISPLAY=:1
+
+      - name: Start VNC Server
+        run: |
+          sudo -u roxx vncserver :1 -geometry 1280x720 -depth 24 \
+            -localhost no -SecurityTypes None
 
       - name: Install Ngrok
         run: |
@@ -55,8 +54,8 @@ jobs:
       - name: Auth Ngrok
         run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
 
-      - name: Start Ngrok Tunnel
-        run: ngrok tcp 3389  # For xrdp
+      - name: Start Ngrok Tunnel (VNC)
+        run: ngrok tcp 5901
 
 
     
