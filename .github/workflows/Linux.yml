@@ -6,12 +6,13 @@ jobs:
     steps:
       - name: Setup User
         run: |
-          sudo useradd -m roxx
+          sudo useradd -m -u 1001 roxx  # Explicit UID matching runner
           echo "roxx:123456" | sudo chpasswd
           sudo usermod -aG sudo roxx
           sudo chown -R roxx:roxx /home/roxx
+          sudo chmod 700 /home/roxx
 
-      - name: Install Core Packages
+      - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install -y \
@@ -20,7 +21,7 @@ jobs:
             x11-utils xserver-xorg-legacy xfconf \
             xfce4-session xfce4-panel
 
-      - name: Configure VNC Environment
+      - name: Configure VNC
         run: |
           sudo -u roxx bash -c '
             mkdir -p /home/roxx/.vnc
@@ -32,52 +33,50 @@ jobs:
               unset SESSION_MANAGER
               unset DBUS_SESSION_BUS_ADDRESS
               
-              export XDG_DATA_DIRS=/usr/share/ubuntu:/usr/local/share/:/usr/share/
-              export XDG_CONFIG_DIRS=/etc/xdg/xdg-ubuntu:/etc/xdg
-              export XDG_RUNTIME_DIR=/run/user/$(id -u)
-              mkdir -p $XDG_RUNTIME_DIR && chmod 700 $XDG_RUNTIME_DIR
+              # Fix XDG Runtime Directory (explicit UID)
+              export XDG_RUNTIME_DIR=/run/user/1001
+              sudo mkdir -p $XDG_RUNTIME_DIR
+              sudo chmod 700 $XDG_RUNTIME_DIR
+              sudo chown roxx:roxx $XDG_RUNTIME_DIR
               
-              # Initialize D-Bus with systemd-like environment
+              # Fix DBus machine-id
+              sudo mkdir -p /var/lib/dbus
+              sudo ln -sf /etc/machine-id /var/lib/dbus/machine-id
+              
+              # Initialize D-Bus properly
               eval $(dbus-launch --sh-syntax --exit-with-session)
               export $(dbus-launch)
               
-              # Required for Xfce4 session
-              sudo mkdir -p /var/lib/dbus
-              sudo ln -sf /run/machine-id /var/lib/dbus/machine-id
-              
-              # Start essential services
+              # Start critical services
               /usr/libexec/xfce-polkit &
               /usr/libexec/at-spi-bus-launcher --launch-immediately &
               /usr/libexec/dconf-service &
               
-              # Xfce4 Session with explicit DBUS activation
-              exec startxfce4 --with-ck-launch
+              # Fix Xauthority
+              touch /home/roxx/.Xauthority
+              chmod 600 /home/roxx/.Xauthority
+              
+              exec startxfce4
               EOF
 
-            chmod +x /home/roxx/.vnc/xstartup
+            chmod 755 /home/roxx/.vnc/xstartup  # Explicit execute permissions
           '
 
-      - name: Cleanup Previous Sessions
+      - name: Cleanup Sessions
         run: |
           sudo pkill -9 Xvfb || true
           sudo -u roxx vncserver -kill :1 >/dev/null 2>&1 || true
+          sudo rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
 
-      - name: Debug Environment
-        run: |
-          sudo -u roxx bash -c '
-            echo "=== Environment ==="
-            env
-            echo "=== XDG Runtime ==="
-            ls -l /run/user/$(id -u)
-            echo "=== D-Bus Info ==="
-            dbus-launch --version
-          '
-          
       - name: Start VNC Server
         run: |
-          sudo -u roxx vncserver :1 -geometry 1280x720 -depth 24 \
-            -localhost no \
-            -SecurityTypes VncAuth -PasswordFile /home/roxx/.vnc/passwd
+          sudo -u roxx bash -c '
+            export USER=roxx
+            export HOME=/home/roxx
+            vncserver :1 -geometry 1280x720 -depth 24 \
+              -localhost no \
+              -SecurityTypes VncAuth -PasswordFile /home/roxx/.vnc/passwd
+          '
 
       - name: Install Ngrok
         run: |
