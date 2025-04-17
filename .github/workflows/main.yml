@@ -1,6 +1,6 @@
 name: Cl
 
-on: [public]
+on: [workflow_dispatch]
 
 jobs:
   build:
