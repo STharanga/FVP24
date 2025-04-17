@@ -1,10 +1,10 @@
-name: Linux
+name: Linux Desktop
 on: workflow_dispatch
 jobs:
-  my_job:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: System Setup
+      - name: Setup User
         run: |
           sudo useradd -m roxx
           echo "roxx:123456" | sudo chpasswd
@@ -13,24 +13,37 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y dbus-x11 xfce4 xfce4-goodies xorg xserver-xorg-core
-          sudo service dbus start
+          sudo apt install -y \
+            dbus-x11 \
+            xfce4-session \
+            xfdesktop4 \
+            xfwm4 \
+            xfce4-panel \
+            xfce4-terminal \
+            xfconf \
+            xfce4-settings \
+            xserver-xorg-legacy \
+            xorgxrdp \
+            xrdp
+
+      - name: Start D-Bus
+        run: |
+          eval `dbus-launch --sh-syntax`
+          echo "DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> $GITHUB_ENV
 
       - name: Configure XFCE
         run: |
-          echo "export XDG_CONFIG_DIRS=/etc/xdg" | sudo tee -a /etc/environment
-          sudo -u roxx bash -c 'echo "exec /usr/bin/xfce4-session" > ~/.xsession'
-          sudo chown roxx:roxx /home/roxx/.xsession
+          export XDG_CONFIG_DIRS=/etc/xdg:/usr/share/xfce4:/etc
+          echo "XDG_CONFIG_DIRS=$XDG_CONFIG_DIRS" | sudo tee -a /etc/environment
+          sudo -u roxx bash -c 'echo "exec /usr/bin/startxfce4" > ~/.xsession'
           sudo chmod +x /home/roxx/.xsession
 
-      - name: Start Xvfb
+      - name: Start XFCE Headless
         run: |
-          sudo Xvfb :99 -screen 0 1280x720x24 &
-          export DISPLAY=:99
+          sudo -u roxx xvfb-run --server-args="-screen 0 1280x720x24" /usr/bin/startxfce4 > /dev/null 2>&1 &
 
-      - name: Install xrdp (Optional for RDP)
+      - name: Start xrdp
         run: |
-          sudo apt install -y xrdp xorgxrdp
           sudo systemctl restart xrdp
 
       - name: Install Ngrok
