@@ -46,8 +46,8 @@ jobs:
     steps:
       - name: Cleanup Junk
         run: |
-          curl -L -o Cleanup.sh \
-              https://raw.githubusercontent.com/Diwash0007/Ubuntu_RDP/main/Cleanup.sh
+          curl -L -o Cleanup.sh 
+              https://raw.githubusercontent.com/dprised/Ubuntu_RDP/refs/heads/main/Cleanup.sh
           chmod +x Cleanup.sh
           ./Cleanup.sh
 
