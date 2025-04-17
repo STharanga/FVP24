@@ -9,6 +9,8 @@ jobs:
           sudo useradd -m roxx
           echo "roxx:123456" | sudo chpasswd
           sudo adduser roxx sudo
+          # Fix home directory permissions
+          sudo chown -R roxx:roxx /home/roxx
 
       - name: Install Dependencies
         run: |
@@ -21,19 +23,17 @@ jobs:
 
       - name: Configure VNC
         run: |
-          mkdir -p /home/roxx/.vnc
-          echo "vncpass" | vncpasswd -f > /home/roxx/.vnc/passwd
-          chmod 600 /home/roxx/.vnc/passwd
-          chown -R roxx:roxx /home/roxx/.vnc
+          # Run as 'roxx' to avoid permission issues
+          sudo -u roxx mkdir -p /home/roxx/.vnc
+          echo "vncpass" | sudo -u roxx vncpasswd -f > /home/roxx/.vnc/passwd
+          sudo chmod 600 /home/roxx/.vnc/passwd
 
-          # Create VNC startup script
+          # Create xstartup as 'roxx'
           echo '#!/bin/bash
           unset SESSION_MANAGER
           unset DBUS_SESSION_BUS_ADDRESS
-          exec startxfce4' > /home/roxx/.vnc/xstartup
-
-          chmod +x /home/roxx/.vnc/xstartup
-          chown roxx:roxx /home/roxx/.vnc/xstartup
+          exec startxfce4' | sudo -u roxx tee /home/roxx/.vnc/xstartup >/dev/null
+          sudo chmod +x /home/roxx/.vnc/xstartup
 
       - name: Start Virtual Display
         run: |
