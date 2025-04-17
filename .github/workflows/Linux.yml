@@ -9,7 +9,6 @@ jobs:
           sudo useradd -m roxx
           echo "roxx:123456" | sudo chpasswd
           sudo adduser roxx sudo
-          # Fix home directory permissions
           sudo chown -R roxx:roxx /home/roxx
 
       - name: Install Dependencies
@@ -21,29 +20,29 @@ jobs:
             dbus-x11 xserver-xorg-legacy \
             xvfb
 
-      - name: Configure VNC
+      - name: Configure VNC Securely
         run: |
-          # Run as 'roxx' to avoid permission issues
+          # Create password non-interactively
           sudo -u roxx mkdir -p /home/roxx/.vnc
           echo "vncpass" | sudo -u roxx vncpasswd -f > /home/roxx/.vnc/passwd
-          sudo chmod 600 /home/roxx/.vnc/passwd
+          sudo -u roxx chmod 600 /home/roxx/.vnc/passwd
 
-          # Create xstartup as 'roxx'
+          # Create secure xstartup
           echo '#!/bin/bash
           unset SESSION_MANAGER
           unset DBUS_SESSION_BUS_ADDRESS
           exec startxfce4' | sudo -u roxx tee /home/roxx/.vnc/xstartup >/dev/null
-          sudo chmod +x /home/roxx/.vnc/xstartup
+          sudo -u roxx chmod +x /home/roxx/.vnc/xstartup
 
       - name: Start Virtual Display
         run: |
           sudo Xvfb :1 -screen 0 1280x720x24 &
           export DISPLAY=:1
 
-      - name: Start VNC Server
+      - name: Start Secure VNC Server
         run: |
           sudo -u roxx vncserver :1 -geometry 1280x720 -depth 24 \
-            -localhost no -SecurityTypes None
+            -SecurityTypes VncAuth -PasswordFile /home/roxx/.vnc/passwd
 
       - name: Install Ngrok
         run: |
