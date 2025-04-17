@@ -122,11 +122,24 @@ if [[ ${retain_homebrew} != "true" ]]; then
   echo "::endgroup::"
 fi
 
+if [[ ${retain_docker_buildkit} != "true" ]]; then
+  export retain_docker_imgcache="false"
+fi
 if [[ ${retain_docker_imgcache} != "true" ]]; then
   echo "::group:: {[-]}  Clearing Docker Image Caches"
   echo -e "The Following Docker Images Is Being Purged..."
   docker rmi -f $(docker images -q) 2>/dev/null
   echo "::endgroup::"
+fi
+if [[ ${retain_docker_buildkit} != "true" ]]; then
+  export AptPurgeList+=" moby-buildx moby-cli moby-compose moby-containerd moby-engine moby-runc"
+  export DirPurgeList+=" /usr/bin/docker-credential-ecr-login /usr/local/bin/docker-compose /usr/bin/docker*"
+fi
+
+if [[ ${retain_container_tools} != "true" ]]; then
+  export AptPurgeList+=" podman buildah skopeo containers-common"
+  export DirPurgeList+=" $(parallel -j4 echo /usr/local/bin/{} ::: kind kubectl helm minikube kustomize)"
+  export DirPurgeList+=" /usr/local/bin/terraform"
 fi
 
 if [[ ${retain_android_sdk} != "true" ]]; then
@@ -148,7 +161,20 @@ if [[ ${retain_database} != "true" ]]; then
 fi
 
 if [[ ${retain_browser_all} == "true" ]]; then
-  for i in edge; do export retain_browser_${i}="true"; done
+  for i in firefox chrome edge; do export retain_browser_${i}="true"; done
+fi
+if [[ ${retain_browser_firefox} != "true" ]]; then
+  sudo bash -c 'cat >/etc/apt/preferences.d/mozilla-firefox' <<EOX
+Package: *
+Pin: release o=LP-PPA-mozillateam
+Pin-Priority: 1001
+EOX
+  export AptPurgeList+=" firefox"
+  export DirPurgeList+=" /usr/lib/firefox /usr/local/share/gecko_driver /usr/bin/geckodriver"
+fi
+if [[ ${retain_browser_chrome} != "true" ]]; then
+  export AptPurgeList+=" google-chrome-stable"
+  export DirPurgeList+=" /usr/bin/google-chrome /usr/local/share/chrome_driver /usr/bin/chromedriver /usr/local/share/chromium /usr/bin/chromium /usr/bin/chromium-browser"
 fi
 if [[ ${retain_browser_edge} != "true" ]]; then
   export AptPurgeList+=" microsoft-edge-stable"
@@ -163,9 +189,25 @@ if [[ ${retain_webservers} != "true" ]]; then
   export AptPurgeList+=" apache2 apache2-* nginx nginx-*"
 fi
 
+if [[ ${retain_php} != "true" ]]; then
+  export AptPurgeList+=" php-* php7* php8*"
+  export DirPurgeList+=" /usr/share/php* /etc/php /usr/local/bin/phpunit"
+  export DirPurgeList+=" /usr/bin/composer /home/runner/.config/composer /etc/skel/.composer /etc/.composer"
+fi
+
 if [[ ${retain_cloud_cli} != "true" ]]; then
   export AptPurgeList+=" session-manager-plugin azure-cli google-cloud-sdk"
   export DirPurgeList+=" /usr/local/bin/aliyun /usr/local/bin/aws /usr/local/bin/aws_completer /usr/local/aws-cli /usr/local/aws /usr/local/aws-sam-cli /usr/local/bin/azcopy* /usr/share/az_* /opt/az /usr/bin/az /usr/share/google-cloud-sdk /usr/local/bin/bicep /usr/local/bin/oc /usr/local/bin/oras"
+fi
+
+if [[ ${retain_vcs} != "true" ]]; then
+  # git cli is kept back, hub and gh are removed
+  export AptPurgeList+=" gh subversion mercurial"
+  export DirPurgeList+=" /usr/local/bin/hub"
+fi
+
+if [[ ${retain_vim} != "true" ]]; then
+  export AptPurgeList+=" vim vim-*"
 fi
 
 if [[ ${retain_dotnet} != "true" ]]; then
@@ -195,11 +237,30 @@ if [[ ${retain_nodejs_npm} != "true" ]]; then
   export DirPurgeList+=" /usr/local/n /usr/local/bin/n /usr/local/lib/node_modules /etc/skel/.nvm /home/runner/.nvm"
 fi
 
+if [[ "${retain_toolcache_pypy}" != "true" && "${retain_toolcache_python}" != "true" ]]; then
+  export retain_pipx="false"
+fi
+if [[ ${retain_pipx} != "true" ]]; then
+  { pipx uninstall-all && sudo pip3 uninstall -q -y pipx; } &>/dev/null
+  export DirPurgeList+=" /opt/pipx /opt/pipx_bin"
+  find /usr/share /usr/lib ~/.local/lib -depth -type d -name __pycache__ \
+    -exec rm -rf '{}' + &>/dev/null;
+fi
+
+if [[ ${retain_toolcache_all} == "true" ]]; then
+  for i in CodeQL Java PyPy Python Ruby go node; do export retain_toolcache_${i,,}="true"; done
+fi
 if [[ "${retain_toolcache_codeql}" != "true" ]]; then
   export DirPurgeList+=" /opt/hostedtoolcache/CodeQL"
 fi
 if [[ "${retain_toolcache_java}" != "true" ]]; then
   export DirPurgeList+=" /opt/hostedtoolcache/Java*"
+fi
+if [[ "${retain_toolcache_pypy}" != "true" ]]; then
+  export DirPurgeList+=" /opt/hostedtoolcache/PyPy"
+fi
+if [[ "${retain_toolcache_python}" != "true" ]]; then
+  export DirPurgeList+=" /opt/hostedtoolcache/Python"
 fi
 if [[ "${retain_toolcache_ruby}" != "true" ]]; then
   export DirPurgeList+=" /opt/hostedtoolcache/Ruby"
@@ -210,6 +271,28 @@ fi
 if [[ "${retain_toolcache_node}" != "true" ]]; then
   export DirPurgeList+=" /opt/hostedtoolcache/node"
 fi
+
+if [[ ${retain_compiler_all} == "true" ]]; then
+  for i in gcc gfortran llvm_clang cmake; do export retain_compiler_${i}="true"; done
+fi
+if [[ ${retain_compiler_gcc} != "true" ]]; then
+  case "$(lsb_release -rs)" in
+  "22.04") export AptPurgeList+=" g++-9 g++-10 g++-12 gcc-9 gcc-10 gcc-12" ;;
+  "20.04") export AptPurgeList+=" g++-10 g++-12 gcc-10 gcc-12" ;;
+  esac
+fi
+if [[ ${retain_compiler_gfortran} != "true" ]]; then
+  export AptPurgeList+=" gfortran-*"
+fi
+if [[ ${retain_compiler_llvm_clang} != "true" ]]; then
+  export AptPurgeList+=" clang-* libclang* llvm-* libllvm* lldb-* lld-* clang-format-* clang-tidy-*"
+  export DirPurgeList+=" /usr/lib/llvm-*"
+fi
+if [[ ${retain_compiler_cmake} != "true" ]]; then
+  export DirPurgeList+=" $(parallel -j4 echo /usr/local/bin/{} ::: ccmake cmake cmake-gui cpack ctest)"
+  export DirPurgeList+=" /usr/local/share/cmake-* /usr/local/*cmake* /usr/local/*/*cmake*"
+fi
+
 if [[ ${retain_powershell} != "true" ]]; then
   export AptPurgeList+=" powershell"
   export DirPurgeList+=" /opt/microsoft/powershell /usr/local/share/powershell"
@@ -238,6 +321,20 @@ fi
 
 if [[ ${retain_swift} != "true" ]]; then
   export DirPurgeList+=" /usr/share/swift /usr/local/bin/swift /usr/local/bin/swiftc"
+fi
+
+if [[ ${retain_snapd} != "true" ]]; then
+  {
+    for i in lxd core20; do sudo snap remove --purge ${i}; done
+    sudo snap remove --purge snapd
+  } &>/dev/null
+  sudo bash -c 'cat >/etc/apt/preferences.d/nosnap' <<EOX
+Package: snapd
+Pin: release a=*
+Pin-Priority: -10
+EOX
+  export AptPurgeList+=" snapd"
+  export DirPurgeList+=" /var/cache/snapd /home/runner/snap"
 fi
 
 if [[ ${retain_manpages} != "true" ]]; then
