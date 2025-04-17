@@ -30,7 +30,6 @@ jobs:
           sudo chown -R roxx:roxx /home/roxx
           sudo chmod 700 /home/roxx
 
-
       - name: Install Xfce and VNC
         run: |
           sudo apt update
@@ -48,38 +47,37 @@ jobs:
           chmod 600 /home/roxx/.vnc/passwd
 
           cat > /home/roxx/.vnc/xstartup << "EOF"
-		#!/bin/bash
-		unset SESSION_MANAGER 
-		unset DBUS_SESSION_BUS_ADDRESS 
-		
-		# Dynamic XDG Runtime Directory
-		export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-		sudo mkdir -p "$XDG_RUNTIME_DIR"
-		sudo chmod 700 "$XDG_RUNTIME_DIR"
-		sudo chown roxx:roxx "$XDG_RUNTIME_DIR"
-		
-		# DBus Configuration
-		sudo mkdir -p /var/lib/dbus
-		sudo ln -sf /etc/machine-id /var/lib/dbus/machine-id
-		
-		# Initialize D-Bus
-		eval "$(dbus-launch --sh-syntax --exit-with-session)"
-		export DBUS_SESSION_BUS_ADDRESS
-		
-		# Xauthority Fix
-		touch "/home/roxx/.Xauthority"
-		chmod 600 "/home/roxx/.Xauthority"
-		
-		# Start Required Services
-		/usr/libexec/xfce-polkit &
-		/usr/libexec/at-spi-bus-launcher --launch-immediately &
-		/usr/libexec/dconf-service &
-		
-		exec startxfce4
-		EOF
-		
-		          chmod 755 /home/roxx/.vnc/xstartup
-		EOVNC
+            #!/bin/bash
+            unset SESSION_MANAGER
+            unset DBUS_SESSION_BUS_ADDRESS
+            # Dynamic XDG Runtime Directory
+            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+            sudo mkdir -p "$XDG_RUNTIME_DIR"
+            sudo chmod 700 "$XDG_RUNTIME_DIR"
+            sudo chown roxx:roxx "$XDG_RUNTIME_DIR"
+
+            # DBus Configuration
+            sudo mkdir -p /var/lib/dbus
+            sudo ln -sf /etc/machine-id /var/lib/dbus/machine-id
+
+            # Initialize D-Bus
+            eval "$(dbus-launch --sh-syntax --exit-with-session)"
+            export DBUS_SESSION_BUS_ADDRESS
+
+            # Xauthority Fix
+            touch "/home/roxx/.Xauthority"
+            chmod 600 "/home/roxx/.Xauthority"
+
+            # Start Required Services
+            /usr/libexec/xfce-polkit &
+            /usr/libexec/at-spi-bus-launcher --launch-immediately &
+            /usr/libexec/dconf-service &
+
+            exec startxfce4
+            EOF
+
+            chmod 755 /home/roxx/.vnc/xstartup
+            EOVNC
 
       - name: Start VNC Server
         run: |
@@ -102,6 +100,3 @@ jobs:
 
       - name: Start Ngrok Tunnel (VNC)
         run: ngrok tcp 5901
-
-
-    
