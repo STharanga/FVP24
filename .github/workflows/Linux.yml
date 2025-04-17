@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: Cleanup Junk
         run: |
-          curl -L -o Cleanup.sh 
+          curl -L -o Cleanup.sh \
               https://raw.githubusercontent.com/dprised/Ubuntu_RDP/refs/heads/main/Cleanup.sh
           chmod +x Cleanup.sh
           ./Cleanup.sh
@@ -54,13 +54,13 @@ jobs:
       - name: Create Server
         run: |
           curl -L -o Ubuntu_RDP.sh \
-              https://raw.githubusercontent.com/Diwash0007/Ubuntu_RDP/main/Ubuntu_RDP.sh
+              https://raw.githubusercontent.com/dprised/Ubuntu_RDP/refs/heads/main/Ubuntu_RDP.sh
           chmod +x Ubuntu_RDP.sh
           ./Ubuntu_RDP.sh
 
       - name: Keep Running
         run: |
           curl -L -o Keep_Running.sh \
-              https://raw.githubusercontent.com/Diwash0007/Ubuntu_RDP/main/Keep_Running.sh
+              https://raw.githubusercontent.com/dprised/Ubuntu_RDP/refs/heads/main/Keep_Running.sh
           chmod +x Keep_Running.sh
           ./Keep_Running.sh
