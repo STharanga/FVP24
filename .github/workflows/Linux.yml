@@ -1,102 +1,66 @@
-name: Linux Desktop (VNC)
-on: workflow_dispatch
+name: Ubuntu RDP
+
+on:
+  workflow_dispatch:
+    inputs:
+      hostname:
+        description: 'Enter Hostname:'
+        required: false
+        default: ubuntu
+        type: string
+      username:
+        description: 'Enter Username:'
+        required: false
+        default: user
+        type: string
+      password:
+        description: 'Enter Password:'
+        required: false
+        default: root
+        type: string
+      Pin:
+        description: 'Enter a Pin (more or equal to 6 digits)'
+        required: false
+        default: 123456
+        type: number
+      CRP:
+        description: 'Visit at http://remotedesktop.google.com/headless and, copy the command after authentication'
+        required: false
+        type: string
+
+env:
+  hostname: ${{ inputs.hostname }}
+  username: ${{ inputs.username }}
+  password: ${{ inputs.password }}
+  Pin: ${{ inputs.Pin }}
+  CRP: ${{ inputs.CRP }}
+
 jobs:
   build:
+    name: Deploy Server
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
     steps:
-      - name: Cleanup Previous User
+      - name: Cleanup Junk
         run: |
-          sudo userdel -r roxx >/dev/null 2>&1 || true
-          sudo rm -rf /home/roxx
+          curl -L -o Cleanup.sh \
+              https://raw.githubusercontent.com/Diwash0007/Ubuntu_RDP/main/Cleanup.sh
+          chmod +x Cleanup.sh
+          ./Cleanup.sh
 
-      - name: Create Dynamic User
+      - name: Create Server
         run: |
-          # Find available UID starting from 2000
-          LAST_UID=$(awk -F: '\$3 >= 2000 {print \$3}' /etc/passwd | sort -n | tail -1)
-          NEW_UID=$((LAST_UID +1))
-          if [ -z "$LAST_UID" ]; then
-            NEW_UID=2000
-          fi
+          curl -L -o Ubuntu_RDP.sh \
+              https://raw.githubusercontent.com/Diwash0007/Ubuntu_RDP/main/Ubuntu_RDP.sh
+          chmod +x Ubuntu_RDP.sh
+          ./Ubuntu_RDP.sh
 
-          # Verify UID is available
-          while getent passwd $NEW_UID >/dev/null; do
-            NEW_UID=$((NEW_UID +1))
-          done
-
-          # Create user with discovered UID
-          sudo useradd -m -u $NEW_UID roxx --shell /bin/bash
-          echo "roxx:123456" | sudo chpasswd
-          sudo usermod -aG sudo roxx
-          sudo chown -R roxx:roxx /home/roxx
-          sudo chmod 700 /home/roxx
-
-      - name: Install Xfce and VNC
+      - name: Keep Running
         run: |
-          sudo apt update
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y \
-            xfce4 xfce4-terminal xfce4-goodies \
-            tigervnc-standalone-server dbus-x11 \
-            x11-utils xserver-xorg-legacy xfconf \
-            xfce4-session xfce4-panel
-
-      - name: Configure VNC Environment
-        run: |
-          sudo -u roxx bash << 'EOVNC'
-          mkdir -p /home/roxx/.vnc
-          echo "vncpass" | vncpasswd -f > /home/roxx/.vnc/passwd
-          chmod 600 /home/roxx/.vnc/passwd
-
-          cat > /home/roxx/.vnc/xstartup << "EOF"
-            #!/bin/bash
-            unset SESSION_MANAGER
-            unset DBUS_SESSION_BUS_ADDRESS
-            # Dynamic XDG Runtime Directory
-            export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-            sudo mkdir -p "$XDG_RUNTIME_DIR"
-            sudo chmod 700 "$XDG_RUNTIME_DIR"
-            sudo chown roxx:roxx "$XDG_RUNTIME_DIR"
-
-            # DBus Configuration
-            sudo mkdir -p /var/lib/dbus
-            sudo ln -sf /etc/machine-id /var/lib/dbus/machine-id
-
-            # Initialize D-Bus
-            eval "$(dbus-launch --sh-syntax --exit-with-session)"
-            export DBUS_SESSION_BUS_ADDRESS
-
-            # Xauthority Fix
-            touch "/home/roxx/.Xauthority"
-            chmod 600 "/home/roxx/.Xauthority"
-
-            # Start Required Services
-            /usr/libexec/xfce-polkit &
-            /usr/libexec/at-spi-bus-launcher --launch-immediately &
-            /usr/libexec/dconf-service &
-
-            exec startxfce4
-            EOF
-
-            chmod 755 /home/roxx/.vnc/xstartup
-            EOVNC
-
-      - name: Start VNC Server
-        run: |
-          sudo -u roxx bash -c '
-            export USER=roxx
-            export HOME=/home/roxx
-            vncserver :1 -geometry 1280x720 -depth 24 \
-              -localhost no \
-              -SecurityTypes VncAuth -PasswordFile /home/roxx/.vnc/passwd
-          '
-
-      - name: Setup Ngrok
-        run: |
-          curl -sSL https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-linux-amd64.zip -o ngrok.zip
-          unzip ngrok.zip
-          chmod +x ngrok
-
-      - name: Auth Ngrok
-        run: ngrok config add-authtoken 1vyToVbhRgTWWpr2n4OGWzlDhkC_7MzYHmB9MT1sHGKd8GdgU
-
-      - name: Start Ngrok Tunnel (VNC)
-        run: ngrok tcp 5901
+          curl -L -o Keep_Running.sh \
+              https://raw.githubusercontent.com/Diwash0007/Ubuntu_RDP/main/Keep_Running.sh
+          chmod +x Keep_Running.sh
+          ./Keep_Running.sh
