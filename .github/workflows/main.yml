@@ -8,6 +8,10 @@ jobs:
     runs-on: windows-latest
 
     steps:
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v2
+      with:
+        vs-prerelease: true
     - name: Download/Install
       run: |
           choco install ngrok -y --limit-output --no-progress
